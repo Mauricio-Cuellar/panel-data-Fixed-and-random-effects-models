@@ -1,0 +1,31 @@
+pacman::p_load(plm, tidyverse,readr,gplots,foreign)
+library(dplyr)
+data <- read.delim("clipboard")
+names(data)
+class(data$Log.GDP.per.capita)
+min(data$Log.GDP.per.capita, na.rm = T)
+max(data$Log.GDP.per.capita, na.rm = T)
+data <- mutate(data, level = ifelse( 
+  data$Log.GDP.per.capita<7.5, print("renta baja"), ifelse(
+    data$Log.GDP.per.capita>7.5 & data$Log.GDP.per.capita<9, print("renta media"),
+    "renta alta"
+  )
+  ))
+table(data$level)
+data.pd <- pdata.frame(data, index =c("Country.name", "year"), drop.index= TRUE)
+data %>% filter(level== "renta alta" |level=="renta baja" | level=="renta media") %>% ggplot(mapping = aes(x = Log.GDP.per.capita,
+                                                       y = Life.Ladder, color =level))+
+  geom_point()+theme_bw()+theme(legend.position = "bottom")+labs(title = "nivel de felicidad ~ PIB per cápita",
+                                                                 caption = "Fuente: Elaboración propia en base al World Happiness Report")+xlab("Log PIB per cápita")+ylab("nivel de felicidad")
+###planteando el modelo panel data 
+fe <- plm(Life.Ladder~Log.GDP.per.capita+Social.support+Healthy.life.expectancy.at.birth+
+            Freedom.to.make.life.choices+Generosity+Perceptions.of.corruption+
+            Positive.affect+Negative.affect, data= data,index = c("Country.name","year"), model = "within")
+summary(fe)
+re <- plm(Life.Ladder~Log.GDP.per.capita+Social.support+Healthy.life.expectancy.at.birth+
+            Freedom.to.make.life.choices+Generosity+Perceptions.of.corruption+
+            Positive.affect+Negative.affect, data= data,index = c("Country.name","year"), model = "random")
+summary(re)
+
+## fe , re slection . . Hausman test , it will compare wether it should be used random efects or fixed efects model
+phtest(fe, re)
